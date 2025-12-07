@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Donasi IKATP FT UNP</title>
+    
+    <!-- 1. TAILWIND CSS (Untuk Styling Cepat) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 2. IMPORT MAP (Agar browser tahu lokasi React & Lucide Icons) -->
+    <script type="importmap">
+    {
+        "imports": {
+            "react": "https://esm.sh/react@18.2.0",
+            "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+            "lucide-react": "https://esm.sh/lucide-react@0.292.0"
+        }
+    }
+    </script>
+
+    <!-- 3. BABEL (Untuk menerjemahkan kode React JSX di browser) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        /* Animasi Kustom untuk Running Text */
+        @keyframes marquee {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+        .animate-marquee {
+            animation: marquee 40s linear infinite;
+        }
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <!-- TEMPAT APLIKASI REACT DIMUAT -->
+    <div id="root"></div>
+
+    <!-- KODE REACT -->
+    <script type="text/babel" data-type="module">
+        import React, { useState, useEffect } from 'react';
+        import { createRoot } from 'react-dom/client';
+        import { 
+            Copy, Phone, Heart, AlertTriangle, CheckCircle, Activity, 
+            Target, FileText, ChevronLeft, ChevronRight, Loader, RefreshCw, WifiOff
+        } from 'lucide-react';
+
+        const FloodReliefApp = () => {
+            // --- CONFIG ---
+            // URL BACKEND GOOGLE APPS SCRIPT ANDA
+            const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxs6zML5nxDaDrCbdrBMo1pbnGhWuzGhVk5lZE90AvogLX5XEXvURdc4He8enH8np3CWA/exec"; 
+            
+            const [loading, setLoading] = useState(true);
+            const [isDemoMode, setIsDemoMode] = useState(false);
+            const [copied, setCopied] = useState(false);
+            const [currentSlide, setCurrentSlide] = useState(0);
+
+            const [data, setData] = useState({
+                summary: { totalIncome: 0, totalExpense: 0, balance: 0 },
+                incomes: [],
+                expenses: []
+            });
+
+            const donationTarget = 5000000;
+
+            const evidencePhotos = [
+                { url: "https://images.unsplash.com/photo-1547638375-ebf04735d792?auto=format&fit=crop&q=80&w=800", caption: "Distribusi Nasi Bungkus" },
+                { url: "https://images.unsplash.com/photo-1469571486292-0ba58a3f068b?auto=format&fit=crop&q=80&w=800", caption: "Evakuasi Warga Terdampak" },
+                { url: "https://images.unsplash.com/photo-1599930113854-d6d7fd521f10?auto=format&fit=crop&q=80&w=800", caption: "Posko Kesehatan IKATP" }
+            ];
+
+            const strategicPlan = [
+                { title: "Tanggap Darurat", status: "Sedang Berjalan", desc: "Evakuasi, dapur umum, dan layanan kesehatan dasar.", color: "bg-red-500" },
+                { title: "Pembersihan Area", status: "Persiapan", desc: "Pengerahan alat berat dan relawan pembersih lumpur.", color: "bg-yellow-500" },
+                { title: "Recovery", status: "Menunggu", desc: "Bantuan perbaikan fasilitas umum dan sanitasi.", color: "bg-blue-500" }
+            ];
+
+            const fetchData = async () => {
+                setLoading(true);
+                setIsDemoMode(false);
+                
+                try {
+                    const response = await fetch(`${GOOGLE_SCRIPT_URL}?t=${new Date().getTime()}`, {
+                        method: 'GET',
+                        redirect: 'follow'
+                    });
+                    
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+                    const json = await response.json();
+                    
+                    if (json.status === "success") {
+                        setData(json);
+                    } else {
+                        throw new Error("Format data tidak sesuai");
+                    }
+                } catch (err) {
+                    console.warn("Gagal mengambil data live, beralih ke mode Demo:", err);
+                    setIsDemoMode(true);
+                    // Gunakan data dummy jika gagal (agar tampilan tidak kosong saat dibuka manual)
+                    setData({
+                        summary: { totalIncome: 3270000, totalExpense: 2000000, balance: 1270000 },
+                        incomes: [{ message: "Semangat IKATP!", name: "Hamba Allah" }],
+                        expenses: [{ date: "4 Des", item: "Logistik (Demo Data)", amount: 1500000, category: "Konsumsi" }]
+                    });
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            useEffect(() => {
+                fetchData();
+            }, []);
+
+            const progressPercentage = Math.min((data.summary.totalIncome / donationTarget) * 100, 100);
+
+            const handleCopy = () => {
+                const textToCopy = '217301001176562';
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(textToCopy);
+                } 
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+            };
+
+            const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % evidencePhotos.length);
+            const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + evidencePhotos.length) % evidencePhotos.length);
+
+            const formatRupiah = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
+
+            const formatDate = (dateString) => {
+                if (!dateString) return "-";
+                const date = new Date(dateString);
+                return isNaN(date.getTime()) ? dateString : date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+            };
+
+            return (
+                <div className="min-h-screen bg-slate-50 font-sans text-slate-800 flex flex-col">
+                    
+                    {/* Running Text */}
+                    <div className="bg-slate-900 text-white py-2 px-4 shadow-md sticky top-0 z-50 overflow-hidden">
+                        <div className="whitespace-nowrap animate-marquee flex items-center gap-8">
+                            {data.incomes.length > 0 ? data.incomes.map((inc, idx) => (
+                                <span key={idx} className="flex items-center gap-2 text-xs md:text-sm font-bold uppercase tracking-wider text-yellow-400">
+                                <Heart size={14} className="text-red-600 fill-red-600" /> {inc.name}: "{inc.message || "Semoga berkah"}"
+                                </span>
+                            )) : <span>Menunggu Data...</span>}
+                             {/* Duplicate Loop */}
+                            {data.incomes.length > 0 && data.incomes.length < 5 && data.incomes.map((inc, idx) => (
+                                <span key={`dup-${idx}`} className="flex items-center gap-2 text-xs md:text-sm font-bold uppercase tracking-wider text-yellow-400">
+                                <Heart size={14} className="text-red-600 fill-red-600" /> {inc.name}: "{inc.message || "Semoga berkah"}"
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+
+                    {isDemoMode && (
+                        <div className="bg-orange-100 text-orange-800 text-xs py-1 px-4 text-center border-b border-orange-200 flex items-center justify-center gap-2">
+                        <WifiOff size={12} />
+                        <span>Mode Offline/Demo: Koneksi ke Google Sheet belum terhubung atau diblokir browser.</span>
+                        </div>
+                    )}
+
+                    {/* Hero Section */}
+                    <header className="bg-gradient-to-br from-slate-800 to-blue-900 text-white pt-8 pb-16 px-4 relative">
+                        <div className="max-w-4xl mx-auto text-center relative z-10">
+                        <div className="flex justify-center items-center gap-2 mb-4">
+                            <span className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 ${loading ? 'bg-slate-600' : 'bg-red-600 animate-pulse'}`}>
+                                <Activity size={12}/> {loading ? "CONNECTING..." : "LIVE DATA"}
+                            </span>
+                        </div>
+                        
+                        <h1 className="text-2xl md:text-3xl font-extrabold mb-6">Transparansi Dana Bencana</h1>
+
+                        <div className="bg-white text-slate-900 rounded-2xl shadow-xl p-6 border-b-4 border-yellow-500 grid grid-cols-1 md:grid-cols-3 gap-6 divide-y md:divide-y-0 md:divide-x divide-slate-100">
+                            <div className="pb-4 md:pb-0">
+                            <p className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-1">Total Donasi Masuk</p>
+                            <p className="text-xl font-bold text-blue-600">{loading ? "..." : formatRupiah(data.summary.totalIncome)}</p>
+                            </div>
+                            <div className="py-4 md:py-0">
+                            <p className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-1">Dana Terpakai</p>
+                            <p className="text-xl font-bold text-red-500">{loading ? "..." : `-${formatRupiah(data.summary.totalExpense)}`}</p>
+                            </div>
+                            <div className="pt-4 md:pt-0 bg-blue-50/50 md:bg-transparent -mx-6 md:mx-0 p-4 md:p-0 rounded-b-xl md:rounded-none">
+                            <p className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-1">Sisa Dana Tersedia</p>
+                            <p className="text-2xl md:text-3xl font-black text-slate-900">{loading ? "..." : formatRupiah(data.summary.balance)}</p>
+                            </div>
+                        </div>
+
+                        <div className="mt-8 bg-slate-800/50 p-4 rounded-xl backdrop-blur-sm border border-slate-700/50">
+                            <div className="flex justify-between text-xs font-semibold mb-2 text-slate-300">
+                            <span>Target Tahap 1: {formatRupiah(donationTarget)}</span>
+                            <span>{Math.round(progressPercentage)}% Terkumpul</span>
+                            </div>
+                            <div className="w-full bg-slate-700 rounded-full h-3 overflow-hidden">
+                            <div className="bg-yellow-400 h-3 rounded-full transition-all duration-1000" style={{ width: `${progressPercentage}%` }}></div>
+                            </div>
+                        </div>
+                        </div>
+                    </header>
+
+                    <main className="container mx-auto px-4 -mt-8 max-w-4xl relative z-20 space-y-8 pb-12">
+                        {/* Laporan Penggunaan Dana */}
+                        <section className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden min-h-[200px]">
+                        <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <FileText className="text-blue-600" size={20}/>
+                                <h3 className="font-bold text-slate-800">Laporan Penggunaan Dana</h3>
+                            </div>
+                            <button onClick={fetchData} className="text-slate-400 hover:text-blue-600 transition-colors" title="Refresh Data">
+                                <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+                            </button>
+                        </div>
+                        
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm text-left">
+                            <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b">
+                                <tr>
+                                <th className="px-6 py-3">Tanggal</th>
+                                <th className="px-6 py-3">Uraian Kegiatan</th>
+                                <th className="px-6 py-3 text-right">Jumlah</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {loading ? (
+                                    <tr><td colSpan="3" className="text-center py-8 text-slate-400">Mengambil data...</td></tr>
+                                ) : data.expenses.length === 0 ? (
+                                    <tr><td colSpan="3" className="text-center py-8 text-slate-400">Belum ada pengeluaran tercatat.</td></tr>
+                                ) : (
+                                    data.expenses.map((exp, idx) => (
+                                    <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                                        <td className="px-6 py-4 font-medium text-slate-500">{formatDate(exp.date)}</td>
+                                        <td className="px-6 py-4 text-slate-800">
+                                        {exp.item}
+                                        <span className="block text-[10px] text-blue-500 bg-blue-50 w-fit px-2 py-0.5 rounded mt-1">{exp.category}</span>
+                                        </td>
+                                        <td className="px-6 py-4 text-right font-mono text-red-600 font-medium">-{formatRupiah(exp.amount)}</td>
+                                    </tr>
+                                    ))
+                                )}
+                            </tbody>
+                            </table>
+                        </div>
+                        </section>
+
+                        {/* Strategi */}
+                        <section>
+                        <h3 className="font-bold text-slate-800 mb-4 px-2 flex items-center gap-2">
+                            <Target size={20} className="text-blue-600"/> Rencana Strategis
+                        </h3>
+                        <div className="grid md:grid-cols-3 gap-4">
+                            {strategicPlan.map((plan, idx) => (
+                            <div key={idx} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
+                                <div className={`absolute top-0 left-0 w-1 h-full ${plan.color}`}></div>
+                                <div className="flex items-start justify-between mb-2">
+                                <h4 className="font-bold text-lg">{plan.title}</h4>
+                                <span className={`text-[10px] px-2 py-1 rounded-full text-white font-bold uppercase ${plan.status === 'Sedang Berjalan' ? 'bg-green-500 animate-pulse' : 'bg-slate-400'}`}>
+                                    {plan.status}
+                                </span>
+                                </div>
+                                <p className="text-sm text-slate-600 leading-relaxed">{plan.desc}</p>
+                            </div>
+                            ))}
+                        </div>
+                        </section>
+
+                        {/* Dokumentasi */}
+                        <section className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
+                        <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                            <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                            <Activity className="text-green-600" size={20}/> Dokumentasi Lapangan
+                            </h3>
+                            <span className="text-xs text-slate-500">{currentSlide + 1} / {evidencePhotos.length}</span>
+                        </div>
+                        
+                        <div className="relative aspect-video bg-slate-900">
+                            <img src={evidencePhotos[currentSlide].url} alt="Dokumentasi" className="w-full h-full object-cover opacity-90"/>
+                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6 pt-12">
+                            <p className="text-white font-medium text-lg">{evidencePhotos[currentSlide].caption}</p>
+                            </div>
+                            <button onClick={prevSlide} className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40 text-white p-2 rounded-full backdrop-blur-md transition-all">
+                            <ChevronLeft size={24} />
+                            </button>
+                            <button onClick={nextSlide} className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40 text-white p-2 rounded-full backdrop-blur-md transition-all">
+                            <ChevronRight size={24} />
+                            </button>
+                        </div>
+                        </section>
+
+                        {/* CTA */}
+                        <section className="bg-slate-900 rounded-2xl p-8 text-white shadow-xl text-center">
+                        <h2 className="text-2xl font-bold mb-2">Salurkan Bantuan Anda</h2>
+                        <div className="bg-white/10 backdrop-blur-sm p-4 rounded-xl border border-white/20 max-w-md mx-auto mb-6 flex items-center justify-between gap-4">
+                            <div className="text-left">
+                            <p className="text-xs uppercase font-bold text-slate-400">BRI a.n IKATP FT UNP</p>
+                            <p className="text-xl md:text-2xl font-mono font-bold">2173 0100 1176 562</p>
+                            </div>
+                            <button onClick={handleCopy} className="bg-white text-slate-900 p-2 rounded-lg hover:bg-slate-100">
+                            {copied ? <CheckCircle size={20} className="text-green-600"/> : <Copy size={20}/>}
+                            </button>
+                        </div>
+                        <div className="flex flex-col md:flex-row gap-3 justify-center">
+                            <a href="https://wa.me/6281351623162" className="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-xl font-bold transition-all shadow-lg flex items-center justify-center gap-2">
+                            <Phone size={18}/> Konfirmasi Robby
+                            </a>
+                            <a href="https://wa.me/6285263295465" className="bg-emerald-600 hover:bg-emerald-700 px-6 py-3 rounded-xl font-bold transition-all shadow-lg flex items-center justify-center gap-2">
+                            <Phone size={18}/> Konfirmasi Mia
+                            </a>
+                        </div>
+                        </section>
+                    </main>
+
+                    <footer className="bg-slate-900 text-slate-500 py-8 text-center text-sm border-t border-slate-800">
+                        <p>&copy; 2025 IKATP FT UNP. Transparansi & Integritas.</p>
+                    </footer>
+                </div>
+            );
+        };
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<FloodReliefApp />);
+    </script>
+</body>
+</html>
